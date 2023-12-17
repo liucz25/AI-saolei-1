@@ -1,0 +1,43 @@
+从CPU运行代码到改造GPU要点：
+snake—agent——文件-class QTrainer
+1、模型model 实例化时，加.to(self.device)
+2、数据，传入模型的数据，每一项都要加 .to(self.device)
+3、数据类型不要改
+4、别处调用模型也需要加.to(self.device)
+snake—agent——文件-class Agent
+    def get_action(self, state, n_game, explore=True):
+        state = torch.tensor(state, dtype=torch.float)
+        prediction = self.trainer.model(state).detach().numpy().squeeze()
+        epsilon = self.max_explore - n_game
+        if explore and random.randint(0, self.max_explore) < epsilon:
+            prob = np.exp(prediction)/np.exp(prediction).sum()
+            final_move = np.random.choice(len(prob), p=prob)
+        else:
+            final_move = prediction.argmax()
+        return final_move
+
+
+-------
+改成
+    def get_action(self, state, n_game, explore=True):
+        state = torch.tensor(state, dtype=torch.float).to(self.trainer.device)
+        prediction = self.trainer.model(state).detach().cpu().numpy().squeeze()
+        epsilon = self.max_explore - n_game
+        if explore and random.randint(0, self.max_explore) < epsilon:
+            prob = np.exp(prediction)/np.exp(prediction).sum()
+            final_move = np.random.choice(len(prob), p=prob)
+        else:
+            final_move = prediction.argmax()
+        return final_move
+
+
+注意 模型数据需要   .to(self.trainer.device)，不是.to(self.device)注意显卡位置
+同时；.numpy()之前需要先．ｃｐｕ（）
+        prediction = self.trainer.model(state).detach().cpu().numpy().squeeze()
+        epsilon = self.max_explore - n_game
+        if explore and random.randint(0, self.max_explore) < epsilon:
+            prob = np.exp(prediction)/np.exp(prediction).sum()
+            final_move = np.random.choice(len(prob), p=prob)
+        else:
+            final_move = prediction.argmax()
+        return final_move
